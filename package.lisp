@@ -1,5 +1,7 @@
 ;;;; package.lisp
 
 (defpackage #:bloggen
-  (:use #:cl))
+  (:use #:cl)
+  (:shadowing-import-from #:ppcre
+                          #:scan-to-strings))
 

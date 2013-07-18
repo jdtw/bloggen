@@ -6,7 +6,12 @@
   :author "John Woood <j@jdtw.us>"
   :license "MIT"
   :depends-on (#:cl-markdown
-               #:html-template)
+               #:cl-fad
+               #:html-template
+               #:cl-ppcre)
   :components ((:file "package")
-               (:file "bloggen")))
+               (:file "util")
+               (:file "bloggen")
+               (:static-file "README.md")
+               (:static-file "LICENSE")))
 
