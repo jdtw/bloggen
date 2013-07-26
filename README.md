@@ -1,3 +1,11 @@
-## bloggen
+## TODO
 
-A simple blog generator in Common Lisp. (Because there aren't enough of those already.)
+This project is under active development, and doesn't do anything
+exciting yet (and maybe it never will -- depends on how you define
+*exciting*).
+
+TL;DR These are not the droids you are looking for.
+
+## License
+
+MIT
