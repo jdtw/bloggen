@@ -15,6 +15,9 @@
   (:shadowing-import-from #:cl-fad
                           #:pathname-relative-p
                           #:directory-pathname-p
+                          #:merge-pathnames-as-file
+                          #:merge-pathnames-as-directory
+                          #:file-exists-p
                           #:walk-directory)
   (:shadowing-import-from #:html-template
                           #:fill-and-print-template

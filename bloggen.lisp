@@ -21,40 +21,55 @@
       (list :title title :date date :author author
             :html html :template (or template "post.tmpl")))))
 
-(defun compile-blog (root &optional (destination "site/"))
-  "Compiles blog. The 'root' directory must have the
-following subdirectories:
+(defparameter *site-root* nil)
 
-    root
-    |_ posts
-    |_ templates
+(defparameter *template-directory* "templates/"
+  "The default template dir relative to *site-root*")
 
-All other subdirectories will be copied directly to the
-destination directory, and all markdown files will be
-processed."
-  (let ((dest (if (pathname-relative-p destination)
-                  (merge-pathnames root destination)
-                  destination))
-        (templates (merge-pathnames "templates/" root)))
-    (labels ((test (path)
-               (if (directory-pathname-p path)
-                   (let ((dirname (car (last (pathname-directory path)))))
-                     (not (eq (aref dirname 0) #\_)))
-                   (markdown-p path)))
-             (md->html (path)
-               (when (and (not (directory-pathname-p path)) (markdown-p path))
-                 (let* ((md (get-markdown path))
-                        (name (nth-value 1 (file-ext (pathname-name path))))
-                        (template (merge-pathnames templates (getf md :template)))
-                        (dest-html (merge-pathnames (concatenate 'string name ".html") dest))
-                        (*string-modifier* #'identity))
-                   (with-open-file (html dest-html
-                                         :direction :output
-                                         :if-exists :supersede
-                                         :element-type 'character
-                                         :external-format :utf-8)
-                     (print (getf md :html))
-                     (fill-and-print-template template (list :body (getf md :html)) :stream html)
-                     (format t "~a~%" dest-html))))))
-      (ensure-directories-exist dest)
-      (walk-directory root #'md->html :directories :breadth-first :test #'test))))
+(defparameter *destination-directory* "site/"
+  "Where the processed files should be placed. Can
+either be relative to *site-root* or absolute")
+
+(defun get-template (tmpl)
+  (or (file-exists-p
+       (merge-pathnames-as-file *site-root*
+                                *template-directory*
+                                tmpl))
+      (error (format nil "~a doesn't exist." tmpl))))
+
+(defun get-destination (name)
+  (ensure-directories-exist
+   (merge-pathnames-as-file *site-root*
+                            *destination-directory*
+                            (format nil "~a.html" name))))
+
+(defun md->html (path)
+  (when (and (not (directory-pathname-p path)) (markdown-p path))
+    (let ((md (get-markdown path))
+          (html-file (get-destination (nth-value 1 (file-ext (pathname-name path)))))
+          (*string-modifier* #'identity))
+      (with-open-file (out html-file
+                           :direction :output
+                           :if-exists :supersede
+                           :element-type 'character
+                           :external-format :utf-8)
+        (fill-and-print-template
+         (get-template (getf md :template))
+         (list :body (remove-if (lambda (c) (eq #\Return c))
+                                (getf md :html)))
+         :stream out)
+        (format t "wrote ~a~%" html-file)))))
+
+(defun compile-blog (root &optional (destination *destination-directory*))
+  (labels ((test (path)
+             (if (directory-pathname-p path)
+                 (let ((dirname (car (last (pathname-directory path)))))
+                   (not (eq (aref dirname 0) #\_)))
+                 (markdown-p path))))
+    (let ((*site-root* root)
+          (*destination-directory* destination))
+      (walk-directory root #'md->html
+                      :directories :breadth-first
+                      :test #'test)))  )
+
+
