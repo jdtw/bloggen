@@ -5,8 +5,6 @@
 ;; start hunchentoot server for testing
 (let ((acceptor nil))
   (defun serve (root &key (port 8080))
-    (when acceptor
-      (stop-serving))
     (setf acceptor (make-instance 'acceptor :port port :document-root root))
     (start acceptor))
   (defun stop-serving ()
@@ -35,19 +33,28 @@ All other subdirectories will be copied directly to the
 destination directory, and all markdown files will be
 processed."
   (let ((dest (if (pathname-relative-p destination)
-                  (merge-pathnames-as-directory root destination)
-                  destination)))
+                  (merge-pathnames root destination)
+                  destination))
+        (templates (merge-pathnames "templates/" root)))
     (labels ((test (path)
                (if (directory-pathname-p path)
                    (let ((dirname (car (last (pathname-directory path)))))
                      (not (eq (aref dirname 0) #\_)))
                    (markdown-p path)))
-             (fn (path)
-               (when (not (directory-pathname-p path))
-                 (let ((md (get-markdown path))
-                       (name (nth-value 1 (file-ext (pathname-name path)))))
-                   (with-open-file (html (merge-pathnames (concatenate 'string name ".html") dest)
-                                         :direction :output :if-exists :supersede :external-format :utf-8)
-                     (princ (getf md :html) html))))))
+             (md->html (path)
+               (when (and (not (directory-pathname-p path)) (markdown-p path))
+                 (let* ((md (get-markdown path))
+                        (name (nth-value 1 (file-ext (pathname-name path))))
+                        (template (merge-pathnames templates (getf md :template)))
+                        (dest-html (merge-pathnames (concatenate 'string name ".html") dest))
+                        (*string-modifier* #'identity))
+                   (with-open-file (html dest-html
+                                         :direction :output
+                                         :if-exists :supersede
+                                         :element-type 'character
+                                         :external-format :utf-8)
+                     (print (getf md :html))
+                     (fill-and-print-template template (list :body (getf md :html)) :stream html)
+                     (format t "~a~%" dest-html))))))
       (ensure-directories-exist dest)
-      (walk-directory root #'fn :directories :breadth-first :test #'test))))
+      (walk-directory root #'md->html :directories :breadth-first :test #'test))))

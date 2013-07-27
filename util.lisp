@@ -14,7 +14,7 @@ Recognizes the extenstions 'md', 'markdown', and 'text'"
   "returns the file extension and the file name"
   (if (not (directory-pathname-p path))
    (let ((result (nth-value 1 (scan-to-strings
-                               "(^[\\w\\.]+)\\.([^\\.]+$)"
+                               "(^.+)\\.([^\\.]+$)"
                                (file-namestring path)))))
      (if result
          (values (aref result 1) (aref result 0))

@@ -14,7 +14,9 @@
                           #:*current-document*)
   (:shadowing-import-from #:cl-fad
                           #:pathname-relative-p
-                          #:merge-pathnames-as-directory
                           #:directory-pathname-p
-                          #:walk-directory))
+                          #:walk-directory)
+  (:shadowing-import-from #:html-template
+                          #:fill-and-print-template
+                          #:*string-modifier*))
 
