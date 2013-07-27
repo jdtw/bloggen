@@ -11,5 +11,10 @@
   (:shadowing-import-from #:markdown
                           #:markdown
                           #:document-property
-                          #:*current-document*))
+                          #:*current-document*)
+  (:shadowing-import-from #:cl-fad
+                          #:pathname-relative-p
+                          #:merge-pathnames-as-directory
+                          #:directory-pathname-p
+                          #:walk-directory))
 

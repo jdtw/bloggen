@@ -12,7 +12,11 @@ Recognizes the extenstions 'md', 'markdown', and 'text'"
 
 (defun file-ext (path)
   "returns the file extension and the file name"
-  (let ((result (nth-value 1 (scan-to-strings
-                              "(^[\\w\\.]+)\\.([^\\.]+$)"
-                              (file-namestring path)))))
-    (values (aref result 1) (aref result 0))))
+  (if (not (directory-pathname-p path))
+   (let ((result (nth-value 1 (scan-to-strings
+                               "(^[\\w\\.]+)\\.([^\\.]+$)"
+                               (file-namestring path)))))
+     (if result
+         (values (aref result 1) (aref result 0))
+         (values "" (file-namestring path))))
+   (error (format nil "~a must not be a directory" path))))
