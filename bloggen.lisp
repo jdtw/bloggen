@@ -2,26 +2,9 @@
 
 (in-package #:bloggen)
 
-;; start hunchentoot server for testing
-(let ((acceptor nil))
-  (defun serve (root &key (port 8080))
-    (when acceptor (stop-serving))
-    (setf acceptor (make-instance 'acceptor :port port :document-root root))
-    (start acceptor))
-  (defun stop-serving ()
-    (stop acceptor)
-    (setf acceptor nil)))
-
-(defun get-markdown (path)
-  (multiple-value-bind (doc html)
-      (markdown path :stream nil)
-    (let* ((*current-document* doc)
-           (title (document-property :title))
-           (date (document-property :date))
-           (author (document-property :author))
-           (template (document-property :template)))
-      (list :title title :date date :author author
-            :html html :template (or template "post.tmpl")))))
+;;;;;;
+;; Directories and directory helpers.
+;;;;;;
 
 (defparameter *site-root* nil)
 
@@ -45,22 +28,55 @@ either be relative to *site-root* or absolute")
                             *destination-directory*
                             (format nil "~a.html" name))))
 
+;;;;;;
+;; Have hunchentoot serve the site
+;; for testing purposes
+;;;;;;
+
+(let ((acceptor nil))
+  (defun serve (&optional (port 8080))
+    (when acceptor (stop-serving))
+    (setf acceptor (make-instance 'acceptor :port port :document-root root))
+    (start acceptor))
+  (defun stop-serving ()
+    (stop acceptor)
+    (setf acceptor nil)))
+
+;;;;;;
+;; Markdown
+;;;;;;
+
+(defun get-markdown (path)
+  (multiple-value-bind (doc html)
+      (markdown path :stream nil)
+    (let ((*current-document* doc))
+      (values
+       (document-property :title)
+       (document-property :date)
+       (document-property :author)
+       (or (document-property :template)
+           "post.tmpl")
+       html))))
+
 (defun md->html (path)
   (when (and (not (directory-pathname-p path)) (markdown-p path))
-    (let ((md (get-markdown path))
-          (html-file (get-destination (nth-value 1 (file-ext (pathname-name path)))))
-          (*string-modifier* #'identity))
-      (with-open-file (out html-file
-                           :direction :output
-                           :if-exists :supersede
-                           :element-type 'character
-                           :external-format :utf-8)
-        (fill-and-print-template
-         (get-template (getf md :template))
-         (list :body (remove-if (lambda (c) (eq #\Return c))
-                                (getf md :html)))
-         :stream out)
-        (format t "wrote ~a~%" html-file)))))
+    (multiple-value-bind (title date author template html)
+        (get-markdown path)
+      (let ((html-file (get-destination (nth-value 1 (file-ext (pathname-name path)))))
+            (*string-modifier* #'identity))
+        (with-open-file (out html-file
+                             :direction :output
+                             :if-exists :supersede
+                             :element-type 'character
+                             :external-format :utf-8)
+          (fill-and-print-template
+           (get-template template)
+           (list :body (remove-if (lambda (c) (eq #\Return c)) html)
+                 :title title
+                 :date date
+                 :author author)
+           :stream out)
+          (format t "wrote ~a~%" html-file))))))
 
 (defun compile-blog (root &optional (destination *destination-directory*))
   (labels ((test (path)
