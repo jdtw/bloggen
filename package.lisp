@@ -20,6 +20,7 @@
                           #:file-exists-p
                           #:walk-directory)
   (:shadowing-import-from #:html-template
+                          #:create-template-printer
                           #:fill-and-print-template
                           #:*string-modifier*))
 
