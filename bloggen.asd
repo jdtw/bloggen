@@ -8,8 +8,7 @@
   :depends-on (#:cl-markdown
                #:cl-fad
                #:html-template
-               #:hunchentoot
-               #:cl-ppcre)
+               #:hunchentoot)
   :components ((:file "package")
                (:file "util")
                (:file "bloggen")

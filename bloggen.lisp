@@ -15,9 +15,6 @@
   "Where the processed files should be placed. Can
 either be relative to *site-root* or absolute")
 
-(defparameter *post-directory* "posts/"
-  "Blog posts")
-
 (defun get-template (tmpl)
   (or (file-exists-p
        (merge-pathnames-as-file *site-root*
@@ -25,16 +22,29 @@ either be relative to *site-root* or absolute")
                                 tmpl))
       (error (format nil "~a doesn't exist." tmpl))))
 
-(defun get-destination (name)
+(defun get-destination-html (name &optional (relative-path #p""))
   (ensure-directories-exist
    (merge-pathnames-as-file *site-root*
                             *destination-directory*
+                            relative-path
                             (format nil "~a.html" name))))
 
-(defun post-p (path)
-  (and (not (directory-pathname-p path))
-       (string= (car (last (pathname-directory path)))
-                (string-trim "/" *post-directory*))))
+(defun root->relative (path)
+  "Given a path that start with *site-root*, returns
+a relative path from site root"
+  (let ((root-list (pathname-directory *site-root*))
+        (path-list (pathname-directory path)))
+    (assert (>= (length path-list) (length root-list)))
+    (loop
+       with relative = path-list
+       for i in root-list
+       for j in path-list
+       do (if (equalp i j)
+              (pop relative)
+              (error "'path' must contain *site-root*"))
+       finally (return (if relative
+                           (make-pathname :directory (cons :relative relative))
+                           nil)))))
 
 ;;;;;;
 ;; Have hunchentoot serve the site
@@ -64,19 +74,27 @@ either be relative to *site-root* or absolute")
        :title (document-property :title)
        :date (document-property :date)
        :date (document-property :author)
-       :template (or (document-property :template) "post.tmpl")
+       :template (document-property :template)
        :body html))))
 
 ;; TODO: use actual templates. This manual creation is temporary.
-(let ((posts nil))
-  (defun add-post (md)
-    (push (getf md :title) posts))
-  (defun generate-index ()
-    (let ((list (format nil "<ul>~{<li>~a</li>~}</ul>" (reverse posts))))
-      (setf posts nil)
-      (fill-template (get-destination "index")
-                     (list :template "index.tmpl"
-                           :body list)))))
+(let ((indexes (make-hash-table :test #'equal)))
+  (defun add-item (dir md)
+    (push (getf md :title) (gethash dir indexes)))
+  (defun generate-indexes ()
+    "Each subdirectory must have its own index template. E.g., if
+there is a directory 'posts/', there must be a template posts.index.tmpl"
+    (loop
+       for dir being the hash-keys in indexes
+       using (hash-value items) do
+         (let ((list (format nil "<ul>~{<li>~a</li>~}</ul>" (reverse items))))
+           (fill-template (get-destination-html "index" dir)
+                          (list :template (format nil
+                                                  "~a.index.tmpl"
+                                                  (first (last (pathname-directory dir))))
+                                :body list))))
+    ;; reset the hash table.
+    (setf indexes (make-hash-table :test #'equal))))
 
 (defun fill-template (file plist)
   "'plist' must contain :template and :body properties. All of the
@@ -100,12 +118,15 @@ properties are passed to the template specified by :template."
       (format t "wrote ~a~%" file))))
 
 (defun md->html (path)
+  ;; if it's a file, and that file is a markdown file...
   (when (and (not (directory-pathname-p path)) (markdown-p path))
-    (let ((md (get-markdown path))
-          (file (get-destination (nth-value 1 (file-ext (pathname-name path))))))
+    (let* ((md (get-markdown path))
+           (relative-dir (root->relative path))
+           (file (get-destination-html (pathname-name path)
+                                       (or relative-dir #p""))))
       (fill-template file md)
-      (when (post-p path)
-        (add-post md)))))
+      (when relative-dir
+        (add-item relative-dir md)))))
 
 (defun compile-blog (root &key (destination *destination-directory*) serve)
   (labels ((test (path)
@@ -119,7 +140,7 @@ properties are passed to the template specified by :template."
                       #'md->html
                       :directories :breadth-first
                       :test #'test)
-      (generate-index)
+      (generate-indexes)
       (when serve
         (serve (merge-pathnames-as-directory *site-root*
                                              *destination-directory*))))))

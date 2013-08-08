@@ -6,8 +6,6 @@
                           #:start
                           #:stop
                           #:acceptor)
-  (:shadowing-import-from #:ppcre
-                          #:scan-to-strings)
   (:shadowing-import-from #:markdown
                           #:markdown
                           #:document-property
