@@ -83,15 +83,16 @@ a relative path from site root"
     (push (getf md :title) (gethash dir indexes)))
   (defun generate-indexes ()
     "Each subdirectory must have its own index template. E.g., if
-there is a directory 'posts/', there must be a template posts.index.tmpl"
+there is a directory 'posts/', there must be a template posts.tmpl"
     (loop
        for dir being the hash-keys in indexes
        using (hash-value items) do
-         (let ((list (format nil "<ul>~{<li>~a</li>~}</ul>" (reverse items))))
-           (fill-template (get-destination-html "index" dir)
+         (let ((list (format nil "<ul>~{<li>~a</li>~}</ul>" (reverse items)))
+               (dir-string (first (last (pathname-directory dir)))))
+           (fill-template (get-destination-html dir-string)
                           (list :template (format nil
-                                                  "~a.index.tmpl"
-                                                  (first (last (pathname-directory dir))))
+                                                  "~a.tmpl"
+                                                  dir-string)
                                 :body list))))
     ;; reset the hash table.
     (setf indexes (make-hash-table :test #'equal))))
