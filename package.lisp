@@ -20,5 +20,8 @@
   (:shadowing-import-from #:html-template
                           #:create-template-printer
                           #:fill-and-print-template
-                          #:*string-modifier*))
+                          #:*string-modifier*)
+  (:export #:compile-blog
+           #:serve
+           #:stop-serving))
 
