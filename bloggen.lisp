@@ -123,8 +123,7 @@ properties are passed to the template specified by :template."
   (when (and (not (directory-pathname-p path)) (markdown-p path))
     (let* ((md (get-markdown path))
            (relative-dir (root->relative path))
-           (file (get-destination-html (pathname-name path)
-                                       (or relative-dir #p""))))
+           (file (get-destination-html (pathname-name path))))
       (fill-template file md)
       (when relative-dir
         (add-item relative-dir md)))))
